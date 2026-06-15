@@ -137,7 +137,7 @@
 <script>
     // DOM Elements
     const canvas = document.getElementById('glcanvas');
-    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true }); // Enables saving the canvas content
+    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
     if (!gl) {
         alert('WebGL not supported!');
         throw new Error('WebGL not supported!');
@@ -151,7 +151,8 @@
 
         void main() {
             gl_Position = a_position;
-            v_texcoord = a_texcoord;
+            // Flip texture coordinates vertically to match video feed
+            v_texcoord = vec2(a_texcoord.x, 1.0 - a_texcoord.y);
         }
     `;
 
@@ -164,7 +165,7 @@
 
         void main() {
             vec4 color = texture2D(u_image, v_texcoord);
-            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114)); // Convert to grayscale brightness
+            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114)); // Grayscale brightness
             vec3 finalColor = vec3(1.0); // Default white background (paper)
 
             // Style 0: Ultra-Detailed Colored Pencil Cross-Hatch
@@ -184,8 +185,8 @@
 
     // Fullscreen Quad Geometry
     const arrays = {
-        a_position: { numComponents: 2, data: [-1, -1, 1, -1, -1, 1, 1, 1] },
-        a_texcoord: { numComponents: 2, data: [0, 0, 1, 0, 0, 1, 1, 1] },
+        a_position: { numComponents: 2, data: [-1, -1, 1, -1, -1, 1, 1, 1] }, // Fullscreen quad
+        a_texcoord: { numComponents: 2, data: [0, 0, 1, 0, 0, 1, 1, 1] }, // Texture coordinates
     };
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
 
@@ -195,6 +196,18 @@
     video.playsInline = true;
     video.muted = true; // Ensure no audio interference
     let videoTexture;
+
+    // Resize Canvas to Match Video and Screen
+    function resizeCanvasToDisplaySize() {
+        const displayWidth = canvas.clientWidth;
+        const displayHeight = canvas.clientHeight;
+
+        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+        }
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    }
 
     // Initialize Video and WebGL Texture
     async function startCamera() {
@@ -223,6 +236,9 @@
             return;
         }
 
+        // Resize the canvas to the screen size
+        resizeCanvasToDisplaySize();
+
         // Bind the video frame to the WebGL texture
         gl.bindTexture(gl.TEXTURE_2D, videoTexture);
         gl.texImage2D(
@@ -234,8 +250,7 @@
             video
         );
 
-        // Set the viewport to match the canvas dimensions
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        // Clear Canvas
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         // Use the shader program
