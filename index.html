@@ -137,7 +137,7 @@
 <script>
     // DOM Elements
     const canvas = document.getElementById('glcanvas');
-    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true }); // Enables saving the canvas content
     if (!gl) {
         alert('WebGL not supported!');
         throw new Error('WebGL not supported!');
@@ -164,11 +164,11 @@
 
         void main() {
             vec4 color = texture2D(u_image, v_texcoord);
-            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-            vec3 finalColor = vec3(1.0);
+            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114)); // Convert to grayscale brightness
+            vec3 finalColor = vec3(1.0); // Default white background (paper)
 
+            // Style 0: Ultra-Detailed Colored Pencil Cross-Hatch
             if (u_style == 0) {
-                // Ultra-Detailed Colored Pencil Cross-Hatch
                 float hatch1 = step(0.5, sin(v_texcoord.x * 50.0) * sin(v_texcoord.y * 50.0));
                 float hatch2 = step(0.5, cos(v_texcoord.x * 50.0) * cos(v_texcoord.y * 50.0));
                 float blend = max(hatch1, hatch2);
@@ -179,10 +179,10 @@
         }
     `;
 
-    // TWGL Program
+    // WebGL Program and Buffers
     const programInfo = twgl.createProgramInfo(gl, [vsSource, fsSource]);
 
-    // Full-screen Quad
+    // Fullscreen Quad Geometry
     const arrays = {
         a_position: { numComponents: 2, data: [-1, -1, 1, -1, -1, 1, 1, 1] },
         a_texcoord: { numComponents: 2, data: [0, 0, 1, 0, 0, 1, 1, 1] },
@@ -193,37 +193,37 @@
     const video = document.createElement('video');
     video.autoplay = true;
     video.playsInline = true;
+    video.muted = true; // Ensure no audio interference
     let videoTexture;
 
-    // Start Camera Feed
+    // Initialize Video and WebGL Texture
     async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = stream;
 
-            // Create WebGL Video Texture
-            videoTexture = twgl.createTexture(gl, {
-                target: gl.TEXTURE_2D,
-                wrapS: gl.CLAMP_TO_EDGE,
-                wrapT: gl.CLAMP_TO_EDGE,
-                min: gl.LINEAR,
-                mag: gl.LINEAR,
-            });
+            // Create WebGL Texture for Video
+            videoTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-            render();
+            render(); // Start rendering once the camera is initialized
         } catch (err) {
-            alert('Failed to access camera: ' + err.message);
+            alert('Failed to access the camera: ' + err.message);
         }
     }
 
     // Render Loop
     function render() {
-        if (!video.readyState) {
+        if (!video.readyState || video.readyState < 2) {
             requestAnimationFrame(render);
             return;
         }
 
-        // Update Video Texture on Every Frame
+        // Bind the video frame to the WebGL texture
         gl.bindTexture(gl.TEXTURE_2D, videoTexture);
         gl.texImage2D(
             gl.TEXTURE_2D,
@@ -234,39 +234,39 @@
             video
         );
 
-        // Clear Canvas
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        // Set the viewport to match the canvas dimensions
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        // Use Shader Program
+        // Use the shader program
         gl.useProgram(programInfo.program);
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
 
-        // Pass Uniforms
+        // Set the uniforms (pass the video texture and the current style)
         twgl.setUniforms(programInfo, {
             u_image: videoTexture,
-            u_style: parseInt(styleSelector.value),
+            u_style: parseInt(document.getElementById('style-selector').value),
         });
 
-        // Draw Scene
+        // Draw the full-screen quad
         twgl.drawBufferInfo(gl, bufferInfo);
 
-        // Loop Rendering
+        // Continue the render loop
         requestAnimationFrame(render);
     }
 
-    // Handle Photo Capture
-    const captureButton = document.getElementById('capture-btn');
-    captureButton.addEventListener('click', () => {
+    // Capture Photo
+    document.getElementById('capture-btn').addEventListener('click', () => {
         const link = document.createElement('a');
         link.download = 'captured-image.png';
-        link.href = canvas.toDataURL();
+        link.href = canvas.toDataURL('image/png');
         link.click();
     });
 
-    // Initialize Camera and App
+    // Initialize Camera
     startCamera();
 </script>
+    
 
 </body>
 </html>
