@@ -151,7 +151,7 @@
 
         void main() {
             gl_Position = a_position;
-            // Flip texture coordinates vertically to match video feed
+            // Flip texture coordinates vertically to match the video feed
             v_texcoord = vec2(a_texcoord.x, 1.0 - a_texcoord.y);
         }
     `;
@@ -165,8 +165,8 @@
 
         void main() {
             vec4 color = texture2D(u_image, v_texcoord);
-            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114)); // Grayscale brightness
-            vec3 finalColor = vec3(1.0); // Default white background (paper)
+            float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114)); // Convert to grayscale brightness
+            vec3 finalColor = vec3(1.0); // Default white background
 
             // Style 0: Ultra-Detailed Colored Pencil Cross-Hatch
             if (u_style == 0) {
@@ -194,19 +194,20 @@
     const video = document.createElement('video');
     video.autoplay = true;
     video.playsInline = true;
-    video.muted = true; // Ensure no audio interference
+    video.muted = true; // No audio interference
     let videoTexture;
 
-    // Resize Canvas to Match Video and Screen
-    function resizeCanvasToDisplaySize() {
+    // Resize Canvas to Fit Fullscreen
+    function resizeCanvasToFullScreen() {
         const displayWidth = canvas.clientWidth;
         const displayHeight = canvas.clientHeight;
 
+        // Update canvas size if it doesn't match the display size
         if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
             canvas.width = displayWidth;
             canvas.height = displayHeight;
         }
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.viewport(0, 0, canvas.width, canvas.height);
     }
 
     // Initialize Video and WebGL Texture
@@ -236,8 +237,8 @@
             return;
         }
 
-        // Resize the canvas to the screen size
-        resizeCanvasToDisplaySize();
+        // Resize the canvas to fill the screen
+        resizeCanvasToFullScreen();
 
         // Bind the video frame to the WebGL texture
         gl.bindTexture(gl.TEXTURE_2D, videoTexture);
@@ -250,27 +251,27 @@
             video
         );
 
-        // Clear Canvas
+        // Clear the canvas
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         // Use the shader program
         gl.useProgram(programInfo.program);
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
 
-        // Set the uniforms (pass the video texture and the current style)
+        // Set the uniforms (pass the video texture and the current filter style)
         twgl.setUniforms(programInfo, {
             u_image: videoTexture,
             u_style: parseInt(document.getElementById('style-selector').value),
         });
 
-        // Draw the full-screen quad
+        // Draw the fullscreen quad
         twgl.drawBufferInfo(gl, bufferInfo);
 
-        // Continue the render loop
+        // Continue rendering
         requestAnimationFrame(render);
     }
 
-    // Capture Photo
+    // Handle Photo Capture
     document.getElementById('capture-btn').addEventListener('click', () => {
         const link = document.createElement('a');
         link.download = 'captured-image.png';
@@ -278,7 +279,7 @@
         link.click();
     });
 
-    // Initialize Camera
+    // Initialize the camera and start the app
     startCamera();
 </script>
     
